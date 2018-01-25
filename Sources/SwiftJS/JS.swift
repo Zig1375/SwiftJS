@@ -27,47 +27,51 @@ public class JS {
         }
     }
 
-    func addVariable(name : String? = nil, value : Value) -> Bool {
-        switch (value) {
-            case is String : duk_push_string(self.ctx, value as! String);
-            case is Double : duk_push_number(self.ctx, value as! Double);
-            case is Float  : duk_push_number(self.ctx, Double(value as! Float));
-            case is Bool   : duk_push_boolean(self.ctx, ((value as! Bool) == true) ? 1 : 0);
+    func addVariable(name : String? = nil, value : Value?) -> Bool {
+        if (value == nil) {
+            duk_push_null(self.ctx);
+        } else {
+            switch (value!) {
+                case is String: duk_push_string(self.ctx, value as! String);
+                case is Double: duk_push_number(self.ctx, value as! Double);
+                case is Float: duk_push_number(self.ctx, Double(value as! Float));
+                case is Bool: duk_push_boolean(self.ctx, ((value as! Bool) == true) ? 1 : 0);
 
-            case is Int32  : duk_push_int(self.ctx, value as! Int32);
-            case is Int16  : duk_push_int(self.ctx, Int32(value as! Int16));
-            case is Int8   : duk_push_int(self.ctx, Int32(value as! Int8));
-            case is UInt32 : duk_push_uint(self.ctx, value as! UInt32);
-            case is UInt16 : duk_push_uint(self.ctx, UInt32(value as! UInt16));
-            case is UInt8  : duk_push_uint(self.ctx, UInt32(value as! UInt8));
+                case is Int32: duk_push_int(self.ctx, value as! Int32);
+                case is Int16: duk_push_int(self.ctx, Int32(value as! Int16));
+                case is Int8: duk_push_int(self.ctx, Int32(value as! Int8));
+                case is UInt32: duk_push_uint(self.ctx, value as! UInt32);
+                case is UInt16: duk_push_uint(self.ctx, UInt32(value as! UInt16));
+                case is UInt8: duk_push_uint(self.ctx, UInt32(value as! UInt8));
 
-            case is UInt   :
-                let v = value as! UInt;
-                if (v <= UInt32.max) {
-                    duk_push_uint(self.ctx, UInt32(v))
-                } else {
-                    duk_push_number(self.ctx, Double(v))
-                }
-
-            case is Int   :
-                let v = value as! Int;
-                if (v >= Int32.min) && (v <= Int32.max) {
-                    duk_push_int(self.ctx, Int32(v))
-                } else {
-                    duk_push_number(self.ctx, Double(v))
-                }
-
-            case is Array<Value>:
-                let arr = value as! Array<Value>;
-                let arr_idx = duk_push_array(self.ctx);
-                for (key, val) in arr.enumerated() {
-                    if (addVariable(value: val)) {
-                        duk_put_prop_index(self.ctx, arr_idx, UInt32(key));
+                case is UInt:
+                    let v = value as! UInt;
+                    if (v <= UInt32.max) {
+                        duk_push_uint(self.ctx, UInt32(v))
+                    } else {
+                        duk_push_number(self.ctx, Double(v))
                     }
-                }
 
-            default :
-                return false;
+                case is Int:
+                    let v = value as! Int;
+                    if (v >= Int32.min) && (v <= Int32.max) {
+                        duk_push_int(self.ctx, Int32(v))
+                    } else {
+                        duk_push_number(self.ctx, Double(v))
+                    }
+
+                case is Array<Value?>:
+                    let arr = value as! Array<Value?>;
+                    let arr_idx = duk_push_array(self.ctx);
+                    for (key, val) in arr.enumerated() {
+                        if (addVariable(value: val)) {
+                            duk_put_prop_index(self.ctx, arr_idx, UInt32(key));
+                        }
+                    }
+
+                default:
+                    return false;
+            }
         }
 
         if let name = name {
@@ -85,96 +89,79 @@ public class JS {
         return duk_get_top(self.ctx);
     }
 
-    func getString(_ index : Int32? = nil) -> String {
+    private func getIndex(_ index : Int32? = nil) -> Int32 {
         if let index = index {
-            return getText(buf: duk_get_string(self.ctx, index));
-        } else {
-            self.varIndex += 1;
-            return getText(buf: duk_get_string(self.ctx, self.varIndex));
+            return index;
         }
+
+        self.varIndex += 1;
+        return self.varIndex;
     }
 
-    func getDouble(_ index : Int32? = nil) -> Double {
-        if let index = index {
-            return duk_get_number(self.ctx, index)
-        } else {
-            self.varIndex += 1;
-            return duk_get_number(self.ctx, self.varIndex);
-        }
+    func getValue(_ index : Int32? = nil) -> Value? {
+        let idx = getIndex(index);
+
+        if (duk_is_string(self.ctx, idx)  == 1) { return getString(idx);  }
+        if (duk_is_number(self.ctx, idx)  == 1) { return getDouble(idx); }
+        if (duk_is_boolean(self.ctx, idx) == 1) { return getBool(idx); }
+        if (duk_is_array(self.ctx, idx)   == 1) { return getArray(idx); }
+
+        return nil;
     }
 
-    func getFloat(_ index : Int32? = nil) -> Float {
-        if let index = index {
-            return Float(duk_get_number(self.ctx, index));
-        } else {
-            self.varIndex += 1;
-            return Float(duk_get_number(self.ctx, self.varIndex));
-        }
+    func getString(_ index : Int32? = nil) -> String? {
+        return getText(buf: duk_get_string(self.ctx, getIndex(index)));
     }
 
-    func getBool(_ index : Int32? = nil) -> Bool {
-        if let index = index {
-            return (duk_require_boolean(self.ctx, index) != 0)
-        } else {
-            self.varIndex += 1;
-            return (duk_require_boolean(self.ctx, self.varIndex) != 0)
-        }
+    func getDouble(_ index : Int32? = nil) -> Double? {
+        return duk_get_number(self.ctx, getIndex(index))
     }
 
-    func getInt32(_ index : Int32? = nil) -> Int32 {
-        if let index = index {
-            return duk_get_int(self.ctx, index);
-        } else {
-            self.varIndex += 1;
-            return duk_get_int(self.ctx, self.varIndex);
+    func getFloat(_ index : Int32? = nil) -> Float? {
+        if let res = getDouble(getIndex(index)) {
+            return Float(res);
         }
+
+        return nil;
     }
 
-    func getUInt32(_ index : Int32? = nil) -> UInt32 {
-        if let index = index {
-            return duk_get_uint(self.ctx, index);
-        } else {
-            self.varIndex += 1;
-            return duk_get_uint(self.ctx, self.varIndex);
-        }
+    func getBool(_ index : Int32? = nil) -> Bool? {
+        return (duk_require_boolean(self.ctx, getIndex(index)) != 0);
     }
 
-    func getInt(_ index : Int32? = nil) -> Int {
-        if let index = index {
-            return Int(duk_get_int(self.ctx, index));
-        } else {
-            self.varIndex += 1;
-            return Int(duk_get_int(self.ctx, self.varIndex));
-        }
+    func getInt32(_ index : Int32? = nil) -> Int32? {
+        return duk_get_int(self.ctx, getIndex(index));
     }
 
-    func getUInt(_ index : Int32? = nil) -> UInt {
-        if let index = index {
-            return UInt(duk_get_uint(self.ctx, index));
-        } else {
-            self.varIndex += 1;
-            return UInt(duk_get_uint(self.ctx, self.varIndex));
-        }
+    func getUInt32(_ index : Int32? = nil) -> UInt32? {
+        return duk_get_uint(self.ctx, getIndex(index));
     }
 
-    func getArray(_ index : Int32? = nil) -> Array<Value> {
+    func getInt(_ index : Int32? = nil) -> Int? {
+        if let res = getInt32(getIndex(index)) {
+            return Int(res);
+        }
+
+        return nil;
+    }
+
+    func getUInt(_ index : Int32? = nil) -> UInt? {
+        if let res = getUInt32(getIndex(index)) {
+            return UInt(res);
+        }
+
+        return nil;
+    }
+
+    func getArray(_ index : Int32? = nil) -> Array<Value?> {
         let elIdx = getArgc();
+        let idx = getIndex(index);
+        let n = duk_get_length(self.ctx, idx);
 
-        if (index == nil) {
-            self.varIndex += 1;
-        }
-
-        let n = duk_get_length(self.ctx, index ?? self.varIndex);
-
-        var arr = [Value]();
+        var arr = [Value?]();
         for i in 0..<n {
-            duk_get_prop_index(ctx, index ?? self.varIndex, UInt32(i));
-
-            if (duk_is_string(self.ctx, elIdx)  == 1) { arr.append(getString(elIdx)); } else
-            if (duk_is_number(self.ctx, elIdx)  == 1) { arr.append(getDouble(elIdx)); } else
-            if (duk_is_boolean(self.ctx, elIdx) == 1) { arr.append(getBool(elIdx)); }   else
-            if (duk_is_array(self.ctx, elIdx)   == 1) { arr.append(getArray(elIdx)); }
-
+            duk_get_prop_index(ctx, idx, UInt32(i));
+            arr.append(getValue(elIdx));
             duk_pop(ctx);
         }
 
@@ -230,12 +217,12 @@ public class JS {
         return result;
     }
 
-    private func getText(buf : UnsafePointer<Int8>) -> String {
-        if let utf8String = String.init(validatingUTF8 : buf) {
+    private func getText(buf : UnsafePointer<Int8>?) -> String? {
+        if let buf = buf, let utf8String = String.init(validatingUTF8 : buf) {
             return utf8String;
         }
 
-        return "";
+        return nil;
     }
 }
 
