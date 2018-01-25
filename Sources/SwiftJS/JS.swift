@@ -27,6 +27,22 @@ public class JS {
         }
     }
 
+    func addVariable(name : String? = nil, value : [String: Value?]) -> Bool {
+        let obj_idx = duk_push_object(self.ctx);
+        for (key, val) in value {
+            if (addVariable(value: val)) {
+                duk_put_prop_string(ctx, obj_idx, key);
+            }
+        }
+
+        if let name = name {
+            duk_put_global_string(self.ctx, name);
+            duk_pop(self.ctx);
+        }
+
+        return true;
+    }
+
     func addVariable(name : String? = nil, value : Value?) -> Bool {
         if (value == nil) {
             duk_push_null(self.ctx);
@@ -69,6 +85,15 @@ public class JS {
                         }
                     }
 
+                case is OrderedDictionary<String, Value>:
+                    let obj = value as! OrderedDictionary<String, Value>;
+                    let obj_idx = duk_push_object(self.ctx);
+                    for (key, val) in obj {
+                        if (addVariable(value: val)) {
+                            duk_put_prop_string(ctx, obj_idx, key);
+                        }
+                    }
+
                 default:
                     return false;
             }
@@ -76,6 +101,7 @@ public class JS {
 
         if let name = name {
             duk_put_global_string(self.ctx, name);
+            duk_pop(self.ctx);
         }
 
         return true;
@@ -105,6 +131,7 @@ public class JS {
         if (duk_is_number(self.ctx, idx)  == 1) { return getDouble(idx); }
         if (duk_is_boolean(self.ctx, idx) == 1) { return getBool(idx); }
         if (duk_is_array(self.ctx, idx)   == 1) { return getArray(idx); }
+        if (duk_is_object(self.ctx, idx)   == 1) { return getObjectLinked(idx); }
 
         return nil;
     }
@@ -154,20 +181,52 @@ public class JS {
     }
 
     func getArray(_ index : Int32? = nil) -> Array<Value?> {
-        let elIdx = getArgc();
         let idx = getIndex(index);
         let n = duk_get_length(self.ctx, idx);
 
         var arr = [Value?]();
         for i in 0..<n {
             duk_get_prop_index(ctx, idx, UInt32(i));
-            arr.append(getValue(elIdx));
+            arr.append(getValue(-1));
             duk_pop(ctx);
         }
 
         return arr;
     }
 
+    func getObjectLinked(_ index : Int32? = nil) -> OrderedDictionary<String, Value> {
+        let idx = getIndex(index);
+        var result = OrderedDictionary<String, Value>();
+
+        duk_enum(self.ctx, idx, 0);
+
+        while (duk_next(js.ctx, -1, 1) != 0) {
+            if let key = js.getString(-2), let val = js.getValue(-1) {
+                result[key] = val;
+            }
+
+            duk_pop_2(self.ctx);
+        }
+
+        return result;
+    }
+
+    func getObject(_ index : Int32? = nil) -> [String : Value?] {
+        let idx = getIndex(index);
+        var result = [String : Value?]();
+
+        duk_enum(self.ctx, idx, 0);
+
+        while (duk_next(js.ctx, -1, 1) != 0) {
+            if let key = js.getString(-2) {
+                result[key] = js.getValue(-1);
+            }
+
+            duk_pop_2(self.ctx);
+        }
+
+        return result;
+    }
 
 
     func createFunction(name : String? = nil, valueCount : Int = 0, _ closure : @escaping JsFunction) -> Bool {
@@ -183,10 +242,21 @@ public class JS {
 
         if let name = name {
             duk_put_global_string(self.ctx, name);
+            duk_pop(self.ctx);
         }
 
         return true;
     }
+
+    func modSearch(_ closure : @escaping JsFunction) {
+        duk_get_global_string(self.ctx, "Duktape");
+
+        createFunction(valueCount: 4, closure);
+        duk_put_prop_string(self.ctx, -2, "modSearch");
+        duk_pop(self.ctx);
+    }
+
+
 
     func execute(code : String, safe : Bool = true) -> String {
         let ret : Int32;
