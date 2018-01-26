@@ -1,6 +1,6 @@
 import Foundation
 
-public struct OrderedDictionary<KeyType:Hashable, ValueType> : CustomStringConvertible, Value {
+public struct ODictionary<KeyType:Hashable, ValueType> : CustomStringConvertible, Value {
     fileprivate var _dictionary:Dictionary<KeyType, ValueType>
     fileprivate var _keys:Array<KeyType>
     fileprivate let skip_nil : Bool;
@@ -23,7 +23,7 @@ public struct OrderedDictionary<KeyType:Hashable, ValueType> : CustomStringConve
         self.skip_nil = skip_nil;
     }
 
-    public init(_ orderedDictionary: OrderedDictionary<KeyType, ValueType>){
+    public init(_ orderedDictionary: ODictionary<KeyType, ValueType>){
         _dictionary = orderedDictionary._dictionary
         _keys = orderedDictionary._keys
         skip_nil = orderedDictionary.skip_nil
@@ -102,7 +102,7 @@ public struct OrderedDictionary<KeyType:Hashable, ValueType> : CustomStringConve
     }
 }
 
-extension OrderedDictionary : Sequence {
+extension ODictionary: Sequence {
     public func makeIterator() -> AnyIterator<(KeyType, ValueType)> {
         var index = 0
         return AnyIterator({ () -> (KeyType, ValueType)? in

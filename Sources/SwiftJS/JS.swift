@@ -85,8 +85,8 @@ public class JS {
                         }
                     }
 
-                case is OrderedDictionary<String, Value>:
-                    let obj = value as! OrderedDictionary<String, Value>;
+                case is ODictionary<String, Value>:
+                    let obj = value as! ODictionary<String, Value>;
                     let obj_idx = duk_push_object(self.ctx);
                     for (key, val) in obj {
                         if (addVariable(value: val)) {
@@ -193,9 +193,9 @@ public class JS {
         return arr;
     }
 
-    public func getObjectLinked(_ index : Int32? = nil) -> OrderedDictionary<String, Value> {
+    public func getObjectLinked(_ index : Int32? = nil) -> ODictionary<String, Value> {
         let idx = getIndex(index);
-        var result = OrderedDictionary<String, Value>();
+        var result = ODictionary<String, Value>();
 
         duk_enum(self.ctx, idx, 0);
 
