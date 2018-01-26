@@ -199,8 +199,8 @@ public class JS {
 
         duk_enum(self.ctx, idx, 0);
 
-        while (duk_next(js.ctx, -1, 1) != 0) {
-            if let key = js.getString(-2), let val = js.getValue(-1) {
+        while (duk_next(self.ctx, -1, 1) != 0) {
+            if let key = getString(-2), let val = getValue(-1) {
                 result[key] = val;
             }
 
