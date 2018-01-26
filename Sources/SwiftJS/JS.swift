@@ -12,12 +12,12 @@ public class JS {
     private let shouldDeinit : Bool;
     private var varIndex : Int32 = -1;
 
-    init() {
+    public init() {
         self.ctx = duk_create_heap_default();
         self.shouldDeinit = true;
     }
 
-    init(ctx : OpaquePointer) {
+    public init(ctx : OpaquePointer) {
         self.ctx = ctx;
         self.shouldDeinit = false;
     }
@@ -28,7 +28,7 @@ public class JS {
         }
     }
 
-    func addVariable(name : String? = nil, value : [String: Value?]) -> Bool {
+    public func addVariable(name : String? = nil, value : [String: Value?]) -> Bool {
         let obj_idx = duk_push_object(self.ctx);
         for (key, val) in value {
             if (addVariable(value: val)) {
@@ -43,7 +43,7 @@ public class JS {
         return true;
     }
 
-    func addVariable(name : String? = nil, value : Value?) -> Bool {
+    public func addVariable(name : String? = nil, value : Value?) -> Bool {
         if (value == nil) {
             duk_push_null(self.ctx);
         } else {
@@ -106,11 +106,11 @@ public class JS {
         return true;
     }
 
-    func pop() {
+    public func pop() {
         duk_pop(self.ctx);
     }
 
-    func getArgc() -> Int32 {
+    public func getArgc() -> Int32 {
         return duk_get_top(self.ctx);
     }
 
@@ -123,7 +123,7 @@ public class JS {
         return self.varIndex;
     }
 
-    func getValue(_ index : Int32? = nil) -> Value? {
+    public func getValue(_ index : Int32? = nil) -> Value? {
         let idx = getIndex(index);
 
         if (duk_is_string(self.ctx, idx)  == 1) { return getString(idx);  }
@@ -135,15 +135,15 @@ public class JS {
         return nil;
     }
 
-    func getString(_ index : Int32? = nil) -> String? {
+    public func getString(_ index : Int32? = nil) -> String? {
         return getText(buf: duk_get_string(self.ctx, getIndex(index)));
     }
 
-    func getDouble(_ index : Int32? = nil) -> Double? {
+    public func getDouble(_ index : Int32? = nil) -> Double? {
         return duk_get_number(self.ctx, getIndex(index))
     }
 
-    func getFloat(_ index : Int32? = nil) -> Float? {
+    public func getFloat(_ index : Int32? = nil) -> Float? {
         if let res = getDouble(getIndex(index)) {
             return Float(res);
         }
@@ -151,19 +151,19 @@ public class JS {
         return nil;
     }
 
-    func getBool(_ index : Int32? = nil) -> Bool? {
+    public func getBool(_ index : Int32? = nil) -> Bool? {
         return (duk_require_boolean(self.ctx, getIndex(index)) != 0);
     }
 
-    func getInt32(_ index : Int32? = nil) -> Int32? {
+    public func getInt32(_ index : Int32? = nil) -> Int32? {
         return duk_get_int(self.ctx, getIndex(index));
     }
 
-    func getUInt32(_ index : Int32? = nil) -> UInt32? {
+    public func getUInt32(_ index : Int32? = nil) -> UInt32? {
         return duk_get_uint(self.ctx, getIndex(index));
     }
 
-    func getInt(_ index : Int32? = nil) -> Int? {
+    public func getInt(_ index : Int32? = nil) -> Int? {
         if let res = getInt32(getIndex(index)) {
             return Int(res);
         }
@@ -171,7 +171,7 @@ public class JS {
         return nil;
     }
 
-    func getUInt(_ index : Int32? = nil) -> UInt? {
+    public func getUInt(_ index : Int32? = nil) -> UInt? {
         if let res = getUInt32(getIndex(index)) {
             return UInt(res);
         }
@@ -179,7 +179,7 @@ public class JS {
         return nil;
     }
 
-    func getArray(_ index : Int32? = nil) -> Array<Value?> {
+    public func getArray(_ index : Int32? = nil) -> Array<Value?> {
         let idx = getIndex(index);
         let n = duk_get_length(self.ctx, idx);
 
@@ -193,7 +193,7 @@ public class JS {
         return arr;
     }
 
-    func getObjectLinked(_ index : Int32? = nil) -> OrderedDictionary<String, Value> {
+    public func getObjectLinked(_ index : Int32? = nil) -> OrderedDictionary<String, Value> {
         let idx = getIndex(index);
         var result = OrderedDictionary<String, Value>();
 
@@ -210,7 +210,7 @@ public class JS {
         return result;
     }
 
-    func getObject(_ index : Int32? = nil) -> [String : Value?] {
+    public func getObject(_ index : Int32? = nil) -> [String : Value?] {
         let idx = getIndex(index);
         var result = [String : Value?]();
 
@@ -228,7 +228,7 @@ public class JS {
     }
 
 
-    func createFunction(name : String? = nil, valueCount : Int = 0, _ closure : @escaping JsFunction) -> Bool {
+    public func createFunction(name : String? = nil, valueCount : Int = 0, _ closure : @escaping JsFunction) -> Bool {
         if (JS.FUNCTIONS.count == 255) {
             print("Reached limit of functions");
             return false;
@@ -246,14 +246,14 @@ public class JS {
         return true;
     }
 
-    func overrideModSearch(_ closure : @escaping JsFunction) {
+    public func overrideModSearch(_ closure : @escaping JsFunction) {
         duk_get_global_string(self.ctx, "Duktape");
 
         let _ = createFunction(valueCount: 4, closure);
         duk_put_prop_string(self.ctx, -2, "modSearch");
     }
 
-    func initModSearch(path : String) {
+    public func initModSearch(path : String) {
         overrideModSearch() { js in
             if let id = js.getString() {
                 guard let file = try? File(path: "\(path)/\(id)") else {
@@ -270,7 +270,7 @@ public class JS {
         };
     }
 
-    func execute(code : String, safe : Bool = true) -> (is_err : Bool, result : String) {
+    public func execute(code : String, safe : Bool = true) -> (is_err : Bool, result : String) {
         let ret : Int32;
         if (safe) {
             JS.CODES[self.ctx] = code;
