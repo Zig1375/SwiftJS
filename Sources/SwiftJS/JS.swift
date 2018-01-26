@@ -207,6 +207,8 @@ public class JS {
             duk_pop_2(self.ctx);
         }
 
+        duk_pop(self.ctx);
+
         return result;
     }
 
@@ -223,6 +225,8 @@ public class JS {
 
             duk_pop_2(self.ctx);
         }
+
+        duk_pop(self.ctx);
 
         return result;
     }
