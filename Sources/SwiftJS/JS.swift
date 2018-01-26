@@ -270,7 +270,7 @@ public class JS {
         };
     }
 
-    func execute(code : String, safe : Bool = true) -> String {
+    func execute(code : String, safe : Bool = true) -> (is_err : Bool, result : String) {
         let ret : Int32;
         if (safe) {
             JS.CODES[self.ctx] = code;
@@ -289,14 +289,9 @@ public class JS {
         }
 
         let result = String(validatingUTF8:duk_safe_to_string(ctx, -1)!)!
-        if ret == DUK_EXEC_SUCCESS {
-            print("Success: \(result)")
-        } else {
-            print("Error: \(result)")
-        }
-
         duk_pop(self.ctx);
-        return result;
+
+        return (is_err : (ret != DUK_EXEC_SUCCESS), result : result);
     }
 
     private func getText(buf : UnsafePointer<Int8>?) -> String? {
