@@ -1,5 +1,6 @@
 import Foundation
 import Duktape
+import Files
 
 public typealias JsFunction = (JS) -> Int32;
 
@@ -37,7 +38,6 @@ public class JS {
 
         if let name = name {
             duk_put_global_string(self.ctx, name);
-            duk_pop(self.ctx);
         }
 
         return true;
@@ -101,7 +101,6 @@ public class JS {
 
         if let name = name {
             duk_put_global_string(self.ctx, name);
-            duk_pop(self.ctx);
         }
 
         return true;
@@ -242,21 +241,34 @@ public class JS {
 
         if let name = name {
             duk_put_global_string(self.ctx, name);
-            duk_pop(self.ctx);
         }
 
         return true;
     }
 
-    func modSearch(_ closure : @escaping JsFunction) {
+    func overrideModSearch(_ closure : @escaping JsFunction) {
         duk_get_global_string(self.ctx, "Duktape");
 
-        createFunction(valueCount: 4, closure);
+        let _ = createFunction(valueCount: 4, closure);
         duk_put_prop_string(self.ctx, -2, "modSearch");
-        duk_pop(self.ctx);
     }
 
+    func initModSearch(path : String) {
+        overrideModSearch() { js in
+            if let id = js.getString() {
+                guard let file = try? File(path: "\(path)/\(id)") else {
+                    return -1;
+                }
 
+                if let str = try? file.readAsString() {
+                    let _ = js.addVariable(value: str);
+                    return 1;
+                }
+            }
+
+            return -1;
+        };
+    }
 
     func execute(code : String, safe : Bool = true) -> String {
         let ret : Int32;
