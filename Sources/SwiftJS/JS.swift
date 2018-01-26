@@ -216,9 +216,9 @@ public class JS {
 
         duk_enum(self.ctx, idx, 0);
 
-        while (duk_next(js.ctx, -1, 1) != 0) {
-            if let key = js.getString(-2) {
-                result[key] = js.getValue(-1);
+        while (duk_next(self.ctx, -1, 1) != 0) {
+            if let key = getString(-2) {
+                result[key] = getValue(-1);
             }
 
             duk_pop_2(self.ctx);
