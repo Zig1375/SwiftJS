@@ -131,7 +131,7 @@ public class JS {
         if (duk_is_array(self.ctx, idx)   == 1) { return getArray(idx); }
         if (duk_is_object(self.ctx, idx)   == 1) { return getObjectLinked(idx); }
         if (duk_is_number(self.ctx, idx)  == 1) {
-            if let t = String(validatingUTF8:duk_to_string(js.ctx, idx)) {
+            if let t = String(validatingUTF8:duk_to_string(self.ctx, idx)) {
                 if (t.contains(".")) {
                     return Double(t);
                 } else {
