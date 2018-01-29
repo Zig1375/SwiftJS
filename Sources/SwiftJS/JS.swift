@@ -127,10 +127,20 @@ public class JS {
         let idx = getIndex(index);
 
         if (duk_is_string(self.ctx, idx)  == 1) { return getString(idx);  }
-        if (duk_is_number(self.ctx, idx)  == 1) { return getDouble(idx); }
         if (duk_is_boolean(self.ctx, idx) == 1) { return getBool(idx); }
         if (duk_is_array(self.ctx, idx)   == 1) { return getArray(idx); }
         if (duk_is_object(self.ctx, idx)   == 1) { return getObjectLinked(idx); }
+        if (duk_is_number(self.ctx, idx)  == 1) {
+            if let t = String(validatingUTF8:duk_to_string(js.ctx, idx)) {
+                if (t.contains(".")) {
+                    return Double(t);
+                } else {
+                    return Int(t);
+                }
+            } else {
+                return getDouble(idx);
+            }
+        }
 
         return nil;
     }
