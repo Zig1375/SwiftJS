@@ -7,10 +7,12 @@ public typealias JsFunction = (JS) -> Int32;
 public class JS {
     static public var CODES = [OpaquePointer : String]();
     static public var FUNCTIONS = [Int32 : JsFunction]();
+    static private let LOCK = NSLock();
 
     public let ctx : OpaquePointer
     private let shouldDeinit : Bool;
     private var varIndex : Int32 = -1;
+    private var functionList = [Int32]();
 
     public init() {
         self.ctx = duk_create_heap_default();
@@ -25,6 +27,13 @@ public class JS {
     deinit {
         if (self.shouldDeinit) {
             duk_destroy_heap(self.ctx);
+
+            // Убиваем функции
+            JS.LOCK.lock();
+            for magicIndex in self.functionList {
+                JS.FUNCTIONS.removeValue(forKey: magicIndex);
+            }
+            JS.LOCK.unlock();
         }
     }
 
@@ -243,12 +252,30 @@ public class JS {
 
 
     public func createFunction(name : String? = nil, valueCount : Int = 0, _ closure : @escaping JsFunction) -> Bool {
+        defer {
+            JS.LOCK.unlock();
+        }
+
+        JS.LOCK.lock();
         if (JS.FUNCTIONS.count == 255) {
             print("Reached limit of functions");
             return false;
         }
 
-        let magicIndex : Int32 = Int32(JS.FUNCTIONS.count + 1) - 129;
+        var magicIndex : Int32 = -129;
+        for i:Int32 in -128...127 {
+            if (JS.FUNCTIONS[i] == nil) {
+                magicIndex = i;
+                break;
+            }
+        }
+
+        if (magicIndex == -129) {
+            print("Reached limit of functions");
+            return false;
+        }
+
+        self.functionList.append(magicIndex);
         JS.FUNCTIONS[magicIndex] = closure;
 
         wrapperFunction(self.ctx, valueCount : Int32(valueCount), magicIndex : magicIndex);
