@@ -171,7 +171,12 @@ public class JS {
     }
 
     public func getBool(_ index : Int32? = nil) -> Bool? {
-        return (duk_require_boolean(self.ctx, getIndex(index)) != 0);
+        let idx = getIndex(index);
+        if (isUndefined(idx)) {
+            return nil;
+        }
+
+        return (duk_require_boolean(self.ctx, idx) != 0);
     }
 
     public func getInt32(_ index : Int32? = nil) -> Int32? {
@@ -250,6 +255,10 @@ public class JS {
         return result;
     }
 
+    public func isUndefined(_ index : Int32? = nil) -> Bool {
+        let idx = getIndex(index);
+        return duk_is_undefined(self.ctx, idx) != 0;
+    }
 
     public func createFunction(name : String? = nil, valueCount : Int = 0, _ closure : @escaping JsFunction) -> Bool {
         defer {
