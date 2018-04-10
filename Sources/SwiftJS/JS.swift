@@ -338,8 +338,14 @@ public class JS {
             duk_eval_string(self.ctx, code);
         }
 
+        if (ret == DUK_EXEC_ERROR) {
+            duk_get_prop_string(self.ctx, -1, "stack");
+        }
+
         let result = String(validatingUTF8:duk_safe_to_string(ctx, -1)!)!
         duk_pop(self.ctx);
+
+        print(result)
 
         return (is_err : (ret != DUK_EXEC_SUCCESS), result : result);
     }
